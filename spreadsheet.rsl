@@ -1,0 +1,101 @@
+<!--
+This spreadsheet is copyright 2009, all rights reserved.
+-->
+<document currentResultWorksheet="Path" verticalSplitterRatio="0.75" horizontalSplitterRatio="0.665865384615" splitterOrientation="Horizontal" suspendRecalculations="False" license="Closed source/proprietary" copyrightOwner="" resolverVersion="1.6.1" resolverBuild="4728" documentVersion="11">
+    <foldState license="True" imports="True" worksheetCreation="True" preConstantsUserCode="False" constants="True" preFormulaeUserCode="False" generated="False" postFormulaeUserCode="False"/>
+    <traitDefaults>
+        <traitDefault name='ColWidth' value='82' />
+        <traitDefault name='FontSize' value='10.0' />
+        <traitDefault name='RowHeight' value='22' />
+    </traitDefaults>
+    <preConstantsUserCode><![CDATA[
+]]></preConstantsUserCode>
+    <preFormulaeUserCode><![CDATA[
+]]></preFormulaeUserCode>
+    <names />
+    <viewStates>
+        <viewState worksheet="Sheet2">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="100" height="100" />
+        </viewState>
+        <viewState worksheet="cache">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="100" height="100" />
+        </viewState>
+        <viewState worksheet="Sheet3">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="100" height="100" />
+        </viewState>
+        <viewState worksheet="Path">
+            <currentCell col="6" row="4" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="24" height="2011" />
+        </viewState>
+    </viewStates>
+    <worksheetOrder>
+        <orderentry name="Path" />
+        <orderentry name="Sheet2" />
+        <orderentry name="Sheet3" />
+        <orderentry name="cache" />
+    </worksheetOrder>
+    <worksheet name="Path" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="ColWidth">
+            <traitentry col="1" row="0" value="55" />
+            <traitentry col="2" row="0" value="55" />
+            <traitentry col="3" row="0" value="55" />
+            <traitentry col="4" row="0" value="55" />
+            <traitentry col="5" row="0" value="50" />
+            <traitentry col="7" row="0" value="52" />
+            <traitentry col="8" row="0" value="52" />
+            <traitentry col="9" row="0" value="52" />
+            <traitentry col="10" row="0" value="52" />
+            <traitentry col="11" row="0" value="52" />
+            <traitentry col="12" row="0" value="52" />
+            <traitentry col="13" row="0" value="52" />
+            <traitentry col="14" row="0" value="52" />
+            <traitentry col="15" row="0" value="52" />
+            <traitentry col="16" row="0" value="52" />
+            <traitentry col="17" row="0" value="52" />
+            <traitentry col="18" row="0" value="52" />
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+        </trait>
+        <array expression="=range(10000)" left="1" top="2" right="1" bottom="2002" />
+        <col name="B" expression="=0" />
+        <col name="C" expression="=0" />
+        <col name="D" expression="=0" />
+        <cell name="D1" value="z" type="general">
+        </cell>
+        <cell name="A1" value="t" type="general">
+        </cell>
+        <cell name="B1" value="x" type="general">
+        </cell>
+        <cell name="C1" value="y" type="general">
+        </cell>
+        <cell name="D5" value="0" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Sheet2" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1">
+    </worksheet>
+    <worksheet name="Sheet3" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1">
+    </worksheet>
+    <postFormulaeUserCode><![CDATA[
+from IPOpenGL import CreateBackgroundSpinningBoxWindow
+
+cachedWS = workbook.AddWorksheet('cache', WorksheetMode.Cache)
+openGLWindow = cachedWS.A1
+if cachedWS.A1 is Empty or cachedWS.A1.done:
+    openGLWindow = CreateBackgroundSpinningBoxWindow("OpenGL Window", 1024, 768)
+    cachedWS.A1 = openGLWindow
+    openGLWindow.xspeed = 0.2
+    openGLWindow.yspeed = 0.2
+    openGLWindow.cameraPos = (0, 0, 12)
+
+openGLWindow.positions = [(row["x"], row["y"], row["z"]) for row in workbook["Path"].ContentRows]
+
+]]></postFormulaeUserCode>
+</document>

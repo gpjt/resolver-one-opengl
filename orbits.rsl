@@ -1,0 +1,1465 @@
+<!--
+Copyright (C) 2009 Giles Thomas
+
+This spreadsheet is licensed under the Creative Commons 
+Attribution-Noncommercial-Share Alike 3.0 Unported license.
+See http://creativecommons.org/licenses/by-nc-sa/3.0/ for details.
+
+-->
+<document currentResultWorksheet="Planets" verticalSplitterRatio="0.75" horizontalSplitterRatio="0.832589285714" splitterOrientation="Horizontal" suspendRecalculations="False" license="Creative Commons Attribution-Noncommercial-Share Alike 3.0 Unported" copyrightOwner="Giles Thomas" resolverVersion="1.6.5" resolverBuild="4777" documentVersion="11">
+    <foldState license="False" imports="True" worksheetCreation="True" preConstantsUserCode="False" constants="True" preFormulaeUserCode="False" generated="True" postFormulaeUserCode="False"/>
+    <traitDefaults>
+        <traitDefault name='ColWidth' value='82' />
+        <traitDefault name='FontSize' value='10.0' />
+        <traitDefault name='RowHeight' value='22' />
+    </traitDefaults>
+    <preConstantsUserCode><![CDATA[
+# The number of points we calculate for each planet's orbit.  Make it larger to get more accurate orbits,
+# at a cost in calculation time.
+pointsPerOrbit = 700
+
+import math
+
+
+
+def calculateMeanAnomaly(time, period):
+    return (2 * PI() * time) / period
+
+def calculateEccentricAnomaly(meanAnomaly, eccentricity):
+    # The equation is transcendental, so we use Newton-Raphson to solve it
+    
+    def f(eccentricAnomaly, meanAnomaly, eccentricity):
+        return eccentricAnomaly - eccentricity * math.sin(eccentricAnomaly) - meanAnomaly
+    
+    def fByDE(eccentricAnomaly, meanAnomaly, eccentricity):
+        return 1 - eccentricity * math.cos(eccentricAnomaly)
+
+    guess = meanAnomaly
+    iterations = 0
+    
+    while abs(f(guess, meanAnomaly, eccentricity)) > 0.00001:
+        guess = guess - (f(guess, meanAnomaly, eccentricity) / fByDE(guess, meanAnomaly, eccentricity))
+        iterations += 1        
+        if iterations > 10:
+            raise Exception("NR took too long")
+   
+    return guess
+
+
+def calculateTrueAnomaly(eccentricity, eccentricAnomaly):
+    return 2 * math.atan(SQRT((1 + eccentricity) / (1 - eccentricity)) * TAN(eccentricAnomaly / 2))
+
+
+def calculateOrbitalDistance(semimajorAxis, eccentricity, trueAnomaly):
+    return semimajorAxis * (1 - eccentricity ** 2) / (1 + eccentricity * COS(trueAnomaly))
+
+
+def calculateX(longAscNode, argPerihelion, inclinationToSun, trueAnomaly, orbitalDistance):
+    return orbitalDistance * (COS(longAscNode) * COS(argPerihelion + trueAnomaly) - SIN(longAscNode) * SIN(argPerihelion + trueAnomaly) * COS(inclinationToSun))
+
+
+def calculateY(longAscNode, argPerihelion, inclinationToSun, trueAnomaly, orbitalDistance):
+    return orbitalDistance * (SIN(longAscNode) * COS(argPerihelion + trueAnomaly) + COS(longAscNode) * SIN(argPerihelion + trueAnomaly) * COS(inclinationToSun))
+
+
+def calculateZ(argPerihelion, inclinationToSun, trueAnomaly, orbitalDistance):
+    return orbitalDistance * SIN(argPerihelion + trueAnomaly) * SIN(inclinationToSun)
+
+
+# A function that returns a function rings around a planet. 
+import clr
+clr.AddReference("Tao.OpenGl")
+from Tao.OpenGl import *
+def generateDrawRingsFunction(angle, innerRadius, outerRadius):
+    def drawRingsFunction(radiusScale):
+        quadric = Glu.gluNewQuadric()
+        Gl.glRotatef(1, 0, 0, angle)
+        Glu.gluDisk(quadric, innerRadius * radiusScale, outerRadius * radiusScale, 32, 32)
+        Glu.gluDeleteQuadric(quadric)
+    return drawRingsFunction
+
+
+
+]]></preConstantsUserCode>
+    <preFormulaeUserCode><![CDATA[
+planetSheets = [worksheet for worksheet in workbook if worksheet.Name != "Planets"]
+
+for worksheet in planetSheets:
+    row = workbook["Planets"].Rows[worksheet.Name]
+    worksheet.A1 = row
+    period = row["Orbital Period (days)"]            
+    row["days/tick"] = period / pointsPerOrbit
+    row["Inclination to Sun's equator (radians)"] = math.radians(row["Inclination to Sun's equator (degrees)"])
+    row["Longitude of ascending node (radians)"] = math.radians(row["Longitude of ascending node (degrees)"])
+    row["Argument of perihelion (radians)"] = math.radians(row["Argument of perihelion (degrees)"])
+    for day in range(pointsPerOrbit):
+        worksheet["tick", day + 2] = day
+            
+]]></preFormulaeUserCode>
+    <names />
+    <viewStates>
+        <viewState worksheet="Mars">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="cache">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="100" height="100" />
+        </viewState>
+        <viewState worksheet="Saturn">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Earth">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Neptune">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Mercury">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="20" height="715" />
+        </viewState>
+        <viewState worksheet="Uranus">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Venus">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Pluto">
+            <currentCell col="11" row="7" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+        <viewState worksheet="Planets">
+            <currentCell col="1" row="1" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="25" height="27" />
+        </viewState>
+        <viewState worksheet="Jupiter">
+            <currentCell col="4" row="1" />
+            <selection left="4" top="1" right="10" bottom="0" />
+            <scrollPos col="1" row="1" />
+            <virtualGridSize width="29" height="35" />
+        </viewState>
+    </viewStates>
+    <worksheetOrder>
+        <orderentry name="Planets" />
+        <orderentry name="Mercury" />
+        <orderentry name="Venus" />
+        <orderentry name="Earth" />
+        <orderentry name="Mars" />
+        <orderentry name="cache" />
+        <orderentry name="Jupiter" />
+        <orderentry name="Saturn" />
+        <orderentry name="Uranus" />
+        <orderentry name="Neptune" />
+        <orderentry name="Pluto" />
+    </worksheetOrder>
+    <worksheet name="Planets" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1" headerCol="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="2" row="0" value="99" />
+            <traitentry col="2" row="9" value="154" />
+            <traitentry col="3" row="0" value="154" />
+            <traitentry col="4" row="0" value="93" />
+            <traitentry col="4" row="6" value="154" />
+            <traitentry col="5" row="0" value="146" />
+            <traitentry col="5" row="7" value="158" />
+            <traitentry col="6" row="0" value="158" />
+            <traitentry col="7" row="0" value="112" />
+            <traitentry col="8" row="0" value="272" />
+            <traitentry col="9" row="0" value="296" />
+            <traitentry col="10" row="0" value="248" />
+            <traitentry col="11" row="0" value="127" />
+            <traitentry col="12" row="0" value="110" />
+            <traitentry col="13" row="0" value="237" />
+            <traitentry col="14" row="0" value="245" />
+            <traitentry col="15" row="0" value="193" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="3" row="0" value="True" />
+            <traitentry col="4" row="0" value="True" />
+            <traitentry col="5" row="0" value="True" />
+            <traitentry col="6" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="3" row="0" value="False" />
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="13" row="0" value="False" />
+            <traitentry col="14" row="0" value="False" />
+            <traitentry col="15" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+            <traitentry col="6" row="2" value="ARGB color: 255, 147, 143, 149" />
+            <traitentry col="6" row="3" value="ARGB color: 255, 227, 226, 224" />
+            <traitentry col="6" row="4" value="ARGB color: 255, 145, 153, 199" />
+            <traitentry col="6" row="5" value="ARGB color: 255, 226, 146, 83" />
+            <traitentry col="6" row="6" value="ARGB color: 255, 247, 182, 136" />
+            <traitentry col="6" row="7" value="ARGB color: 255, 213, 181, 119" />
+            <traitentry col="6" row="8" value="ARGB color: 255, 208, 246, 247" />
+            <traitentry col="6" row="9" value="ARGB color: 255, 97, 150, 249" />
+            <traitentry col="6" row="10" value="ARGB color: 255, 211, 164, 129" />
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="14" row="1" value="False" />
+            <traitentry col="15" row="1" value="False" />
+            <traitentry col="12" row="1" value="False" />
+            <traitentry col="13" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="3" row="0" value="1" />
+            <traitentry col="4" row="0" value="1" />
+            <traitentry col="5" row="0" value="0" />
+            <traitentry col="6" row="0" value="0" />
+            <traitentry col="13" row="0" value="5" />
+            <traitentry col="14" row="0" value="5" />
+            <traitentry col="15" row="0" value="5" />
+        </trait>
+        <cell name="I1" value="Longitude of ascending node (degrees)" type="general">
+        </cell>
+        <cell name="J1" value="Argument of perihelion (degrees)" type="general">
+        </cell>
+        <cell name="E7" value="1,433,449,370" type="general">
+        </cell>
+        <cell name="G6" value="1000" type="general">
+        </cell>
+        <cell name="A5" value="Mars" type="general">
+        </cell>
+        <cell name="B5" value="0.093315" type="general">
+        </cell>
+        <cell name="C4" value="365.256366" type="general">
+        </cell>
+        <cell name="H5" value="5.65" type="general">
+        </cell>
+        <cell name="I6" value="100.492" type="general">
+        </cell>
+        <cell name="J6" value="275.066" type="general">
+        </cell>
+        <cell name="K7" value="=generateDrawRingsFunction((2 * PI() * 26.73) / 360, D7 + 6630, D7 + 120700)" type="general">
+        </cell>
+        <cell name="D7" value="60,268" type="general">
+        </cell>
+        <cell name="G1" value="Radius scale" type="general">
+        </cell>
+        <cell name="A2" value="Mercury" type="general">
+        </cell>
+        <cell name="B2" value="0.205630" type="general">
+        </cell>
+        <cell name="C3" value="224.70069" type="general">
+        </cell>
+        <cell name="H4" value="7.155" type="general">
+        </cell>
+        <cell name="H9" value="6.43" type="general">
+        </cell>
+        <cell name="I7" value="113.642811" type="general">
+        </cell>
+        <cell name="J7" value="336.013862" type="general">
+        </cell>
+        <cell name="I10" value="110.30347" type="general">
+        </cell>
+        <cell name="J10" value="113.76329" type="general">
+        </cell>
+        <cell name="D6" value="71,492" type="general">
+        </cell>
+        <cell name="E1" value="Semimajor axis (km)" type="general">
+        </cell>
+        <cell name="F1" value="Colour" type="general">
+        </cell>
+        <cell name="A3" value="Venus" type="general">
+        </cell>
+        <cell name="B3" value="0.0068" type="general">
+        </cell>
+        <cell name="C2" value="87.9691" type="general">
+        </cell>
+        <cell name="H8" value="6.48" type="general">
+        </cell>
+        <cell name="D10" value="1,153" type="general">
+        </cell>
+        <cell name="L1" value="days/tick" type="general">
+        </cell>
+        <cell name="I8" value="73.989821" type="general">
+        </cell>
+        <cell name="E10" value="5,906,376,272" type="general">
+        </cell>
+        <cell name="J8" value="96.541318" type="general">
+        </cell>
+        <cell name="D9" value="24,764" type="general">
+        </cell>
+        <cell name="A8" value="Uranus" type="general">
+        </cell>
+        <cell name="B8" value="0.044405586" type="general">
+        </cell>
+        <cell name="C9" value="60,190" type="general">
+        </cell>
+        <cell name="G10" value="10000" type="general">
+        </cell>
+        <cell name="A9" value="Neptune" type="general">
+        </cell>
+        <cell name="B9" value="0.011214269" type="general">
+        </cell>
+        <cell name="C8" value="30,799.095" type="general">
+        </cell>
+        <cell name="O1" value="Argument of perihelion (radians)" type="general">
+        </cell>
+        <cell name="H1" value="Inclination to Sun&apos;s equator (degrees)" type="general">
+        </cell>
+        <cell name="I2" value="48.331" type="general">
+        </cell>
+        <cell name="J2" value="29.124" type="general">
+        </cell>
+        <cell name="D3" value="6,051.8" type="general">
+        </cell>
+        <cell name="E4" value="149,597,887.5" type="general">
+        </cell>
+        <cell name="G5" value="1000" type="general">
+        </cell>
+        <cell name="A6" value="Jupiter" type="general">
+        </cell>
+        <cell name="B6" value="0.048775" type="general">
+        </cell>
+        <cell name="M1" value="Inclination to Sun&apos;s equator (radians)" type="general">
+        </cell>
+        <cell name="C7" value="10,832.327" type="general">
+        </cell>
+        <cell name="N1" value="Longitude of ascending node (radians)" type="general">
+        </cell>
+        <cell name="I3" value="76.67069" type="general">
+        </cell>
+        <cell name="J3" value="54.85229" type="general">
+        </cell>
+        <cell name="D2" value="2,439.7" type="general">
+        </cell>
+        <cell name="E5" value="227,939,100" type="general">
+        </cell>
+        <cell name="G4" value="1000" type="general">
+        </cell>
+        <cell name="A7" value="Saturn" type="general">
+        </cell>
+        <cell name="B7" value="0.055723219" type="general">
+        </cell>
+        <cell name="C6" value="4,331.572" type="general">
+        </cell>
+        <cell name="H7" value="5.51" type="general">
+        </cell>
+        <cell name="I4" value="348.73936" type="general">
+        </cell>
+        <cell name="J4" value="114.20783" type="general">
+        </cell>
+        <cell name="D5" value="3,396.2" type="general">
+        </cell>
+        <cell name="E2" value="57,909,100" type="general">
+        </cell>
+        <cell name="G3" value="1000" type="general">
+        </cell>
+        <cell name="C1" value="Orbital Period (days)" type="general">
+        </cell>
+        <cell name="H6" value="6.09" type="general">
+        </cell>
+        <cell name="I5" value="49.562" type="general">
+        </cell>
+        <cell name="J5" value="286.537" type="general">
+        </cell>
+        <cell name="D4" value="6,371.0" type="general">
+        </cell>
+        <cell name="E3" value="108,208,930" type="general">
+        </cell>
+        <cell name="G2" value="1000" type="general">
+        </cell>
+        <cell name="B1" value="Eccentricity" type="general">
+        </cell>
+        <cell name="H10" value="11.88" type="general">
+        </cell>
+        <cell name="I9" value="131.794310" type="general">
+        </cell>
+        <cell name="J9" value="265.646853" type="general">
+        </cell>
+        <cell name="D8" value="25,559" type="general">
+        </cell>
+        <cell name="E8" value="2,876,679,082" type="general">
+        </cell>
+        <cell name="G9" value="1000" type="general">
+        </cell>
+        <cell name="A10" value="Pluto" type="general">
+        </cell>
+        <cell name="B10" value="0.24880766" type="general">
+        </cell>
+        <cell name="E9" value="4,503,443,661" type="general">
+        </cell>
+        <cell name="G8" value="1000" type="general">
+        </cell>
+        <cell name="C10" value="90,613.305" type="general">
+        </cell>
+        <cell name="H3" value="3.86" type="general">
+        </cell>
+        <cell name="K1" value="Rings function" type="general">
+        </cell>
+        <cell name="D1" value="Radius (km)" type="general">
+        </cell>
+        <cell name="E6" value="778,547,200" type="general">
+        </cell>
+        <cell name="G7" value="1000" type="general">
+        </cell>
+        <cell name="A4" value="Earth" type="general">
+        </cell>
+        <cell name="B4" value="0.016710219" type="general">
+        </cell>
+        <cell name="C5" value="686.971" type="general">
+        </cell>
+        <cell name="H2" value="3.38" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Mercury" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Venus" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=#tick#_ * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Earth" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=#tick#_ * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Mars" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=#tick#_ * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Uranus" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Saturn" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Jupiter" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Pluto" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <worksheet name="Neptune" value="" showGrid="True" showBounds="False" headerWidth="-1" headerHeight="-1" headerRow="1">
+        <trait name="FontSize">
+        </trait>
+        <trait name="BorderBottom">
+        </trait>
+        <trait name="ShowNegativeSymbol">
+        </trait>
+        <trait name="Unit">
+        </trait>
+        <trait name="ColWidth">
+            <traitentry col="7" row="0" value="85" />
+            <traitentry col="4" row="0" value="140" />
+            <traitentry col="5" row="0" value="153" />
+            <traitentry col="6" row="0" value="110" />
+        </trait>
+        <trait name="Alignment">
+        </trait>
+        <trait name="BorderTop">
+        </trait>
+        <trait name="WebEditable">
+        </trait>
+        <trait name="Italic">
+        </trait>
+        <trait name="FontFamily">
+        </trait>
+        <trait name="ShowSeparators">
+            <traitentry col="7" row="0" value="True" />
+            <traitentry col="8" row="0" value="True" />
+            <traitentry col="9" row="0" value="True" />
+            <traitentry col="10" row="0" value="True" />
+        </trait>
+        <trait name="Formatter">
+        </trait>
+        <trait name="Underline">
+        </trait>
+        <trait name="Color">
+        </trait>
+        <trait name="RowHidden">
+        </trait>
+        <trait name="BorderLeft">
+        </trait>
+        <trait name="StripZeros">
+            <traitentry col="4" row="0" value="False" />
+            <traitentry col="5" row="0" value="False" />
+            <traitentry col="6" row="0" value="False" />
+            <traitentry col="7" row="0" value="False" />
+            <traitentry col="8" row="0" value="False" />
+            <traitentry col="9" row="0" value="False" />
+            <traitentry col="10" row="0" value="False" />
+        </trait>
+        <trait name="ColHidden">
+        </trait>
+        <trait name="Wrap">
+        </trait>
+        <trait name="NegativeTextColor">
+        </trait>
+        <trait name="BorderRight">
+        </trait>
+        <trait name="RowHeight">
+        </trait>
+        <trait name="BackColor">
+        </trait>
+        <trait name="Bold">
+            <traitentry col="0" row="1" value="True" />
+            <traitentry col="4" row="1" value="False" />
+            <traitentry col="5" row="1" value="False" />
+            <traitentry col="6" row="1" value="False" />
+        </trait>
+        <trait name="Strikethrough">
+        </trait>
+        <trait name="ImagePlacement">
+        </trait>
+        <trait name="DecimalPlaces">
+            <traitentry col="4" row="0" value="5" />
+            <traitentry col="5" row="0" value="5" />
+            <traitentry col="6" row="0" value="5" />
+            <traitentry col="7" row="0" value="0" />
+            <traitentry col="8" row="0" value="0" />
+            <traitentry col="9" row="0" value="0" />
+            <traitentry col="10" row="0" value="0" />
+        </trait>
+        <col name="C" expression="=float(#tick#_) * A1[&quot;days/tick&quot;]" />
+        <col name="D" expression="=calculateMeanAnomaly(#t#_, A1[&quot;Orbital Period (days)&quot;])" />
+        <col name="E" expression="=calculateEccentricAnomaly(#Mean anomaly#_, A1[&quot;Eccentricity&quot;])" />
+        <col name="F" expression="=calculateTrueAnomaly(A1[&quot;Eccentricity&quot;], #Eccentric anomaly#_)" />
+        <col name="G" expression="=calculateOrbitalDistance(A1[&quot;Semimajor axis (km)&quot;], A1[&quot;Eccentricity&quot;], #True anomaly#_)" />
+        <col name="H" expression="=calculateX(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="I" expression="=calculateY(A1[&quot;Longitude of ascending node (radians)&quot;], A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <col name="J" expression="=calculateZ(A1[&quot;Argument of perihelion (radians)&quot;], A1[&quot;Inclination to Sun&apos;s equator (radians)&quot;], #True anomaly#_, #r#_)" />
+        <cell name="I1" value="y" type="general">
+        </cell>
+        <cell name="J1" value="z" type="general">
+        </cell>
+        <cell name="B1" value="tick" type="general">
+        </cell>
+        <cell name="D1" value="Mean anomaly" type="general">
+        </cell>
+        <cell name="E1" value="Eccentric anomaly" type="general">
+        </cell>
+        <cell name="F1" value="True anomaly" type="general">
+        </cell>
+        <cell name="C1" value="t" type="general">
+        </cell>
+        <cell name="H1" value="x" type="general">
+        </cell>
+        <cell name="G1" value="r" type="general">
+        </cell>
+    </worksheet>
+    <postFormulaeUserCode><![CDATA[
+from OpenGLPlanets import CreateBackgroundOrreryWindow, Planet
+
+cachedWS = workbook.AddWorksheet('cache', WorksheetMode.Cache)
+planetWindow = cachedWS.A1
+if planetWindow is Empty or planetWindow.done:
+    planetWindow = CreateBackgroundOrreryWindow("The Solar System", 1024, 768)
+    cachedWS.A1 = planetWindow
+    planetWindow.cameraPos = (0, 0, 100)
+
+planetWindow.planets = []
+for worksheet in planetSheets:
+    positions = [(row["x"], row["y"], row["z"]) for row in worksheet.ContentRows]
+    planet = workbook["Planets"].Rows[worksheet.Name]
+    ringsFunction = None
+    if planet["Rings function"] is not Empty:
+        ringsFunction = planet["Rings function"]
+    planetWindow.planets.append(Planet(planet["Radius (km)"], planet["Radius Scale"], planet.Cells["Colour"].BackColor, planet["days/tick"], ringsFunction, positions))
+]]></postFormulaeUserCode>
+</document>
